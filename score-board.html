@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Court Scoreboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#10283d;--panel:#17364f;--line:#e9f1f7;--mute:#8fa8bb;--a:#ff7a3d;--b:#35c2b0;color-scheme:dark;
+  font-family:"Barlow Condensed","Arial Narrow","Helvetica Neue",Arial,sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--line)}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);overflow:hidden}
+#root{height:100%;height:100dvh}
+button,select,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid #fff;outline-offset:2px}
+
+/* Setup */
+.setup{max-width:480px;margin:0 auto;padding:24px 20px calc(40px + env(safe-area-inset-bottom));height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.setup h1{font-size:2.4rem;margin:0 0 20px;font-weight:800;letter-spacing:.01em}
+.setup label{display:block;margin:14px 0 6px;color:var(--mute);font-size:1.1rem}
+.setup select,.setup input{width:100%;padding:12px 14px;font-size:1.4rem;background:var(--panel);border:2px solid #2b4d69;border-radius:10px}
+.rule{margin:14px 0 0;color:var(--mute);font-size:1.1rem;line-height:1.3}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.go{width:100%;margin-top:24px;padding:16px;font-size:1.8rem;font-weight:800;background:var(--line);color:var(--bg);border:0;border-radius:12px;cursor:pointer}
+
+/* Scorer */
+.app{height:100%;display:grid;grid-template-rows:auto 1fr auto}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 16px;font-size:1.2rem;color:var(--mute)}
+.notice{background:var(--line);color:var(--bg);font-weight:700;padding:4px 12px;border-radius:99px}
+.board{display:grid;grid-template-rows:1fr 1fr;gap:3px;background:var(--line)}
+@media (orientation:landscape){.board{grid-template-rows:none;grid-template-columns:1fr 1fr}}
+.side{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;border:0;background:var(--bg);cursor:pointer;width:100%}
+.side:active{background:var(--panel)}
+.side .name{font-size:clamp(1.4rem,5vmin,2.6rem);font-weight:700}
+.side .pts{font-size:clamp(6rem,32vmin,18rem);font-weight:800;line-height:.9;font-variant-numeric:tabular-nums}
+.side.t0 .pts,.side.t0 .name{color:var(--a)}
+.side.t1 .pts,.side.t1 .name{color:var(--b)}
+.serve{height:1.6rem;font-size:1.2rem;color:var(--line);visibility:hidden}
+.serve.on{visibility:visible}
+.pips{display:flex;gap:8px;margin-top:6px}
+.pip{width:14px;height:14px;border-radius:50%;border:2px solid var(--mute)}
+.pip.f{background:currentColor;border-color:currentColor}
+.bar{display:flex;gap:10px;padding:10px 16px}
+.bar button{flex:1;padding:14px 6px;font-size:1.2rem;font-weight:700;background:var(--panel);border:2px solid #2b4d69;border-radius:10px;cursor:pointer}
+
+/* Standings */
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.tabs button{padding:8px 14px;font-size:1.2rem;font-weight:700;background:var(--panel);border:2px solid #2b4d69;border-radius:99px;cursor:pointer}
+.tabs button.on{background:var(--line);color:var(--bg);border-color:var(--line)}
+.scroll{overflow-x:auto}
+table.st{width:100%;border-collapse:collapse;font-size:1.35rem;font-variant-numeric:tabular-nums}
+table.st th{color:var(--mute);font-weight:500;text-align:right;padding:6px 8px;border-bottom:2px solid var(--line)}
+table.st td{text-align:right;padding:10px 8px;border-bottom:1px solid #2b4d69}
+table.st .l{text-align:left}
+table.st tr:first-child td{color:var(--a)}
+.warn{background:#b3261e!important;border-color:#b3261e!important;color:#fff!important}
+.go.alt{background:transparent;color:var(--line);border:2px solid var(--mute);margin-top:10px}
+
+/* League */
+.nav{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 8px}
+.nav.three{grid-template-columns:repeat(3,1fr)}
+.nav.top{position:sticky;top:-24px;z-index:2;background:var(--bg);padding:10px 0;margin:0 0 6px}
+.nav.three button{font-size:1.15rem;padding:12px 4px}
+.nav button{padding:14px;font-size:1.4rem;font-weight:700;background:var(--panel);border:2px solid var(--line);border-radius:10px;cursor:pointer}
+.setup textarea{width:100%;padding:12px 14px;font-size:1.4rem;background:var(--panel);border:2px solid #2b4d69;border-radius:10px;resize:vertical}
+.setup .chk{display:flex;align-items:center;gap:12px;color:var(--line);margin-top:16px}
+.setup .chk input{width:auto;transform:scale(1.5)}
+.err{color:#ff9a8a;font-size:1.2rem;min-height:1.4rem;margin:8px 0 0}
+.setup.wide{max-width:720px}
+.setup h3{font-size:1.4rem;margin:18px 0 4px;color:var(--mute);font-weight:500}
+table.mx{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+table.mx th{color:var(--mute);font-weight:500;padding:6px 4px;font-size:1.2rem}
+table.mx td{text-align:center;padding:6px 4px;font-size:1.25rem;border-bottom:1px solid #2b4d69}
+table.mx td.l{text-align:left;white-space:nowrap;padding-right:10px}
+table.mx td.dg{background:var(--panel)}
+.win{color:var(--b);font-weight:700}
+.loss{color:var(--mute)}
+.pl{padding:6px 10px;font-size:1.1rem;background:var(--panel);border:2px solid #2b4d69;border-radius:8px;cursor:pointer}
+.fx{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #2b4d69;font-size:1.3rem}
+
+.champ{font-size:1.8rem;font-weight:800;color:var(--a);margin:6px 0 10px}
+
+/* Result */
+.over{position:fixed;inset:0;background:rgba(10,24,38,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center}
+.over h2{font-size:clamp(2.4rem,9vmin,4.5rem);margin:0}
+.over p{font-size:1.6rem;margin:0;color:var(--mute)}
+.over .go{max-width:320px}
+.over .alt{background:transparent;color:var(--line);border:2px solid var(--mute);margin-top:6px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+/* ---------- 1. RULES ENGINE (add a new sport by adding an entry) ---------- */
+const RULES = {
+  badminton: {
+    name: "Badminton", ptw: 21, decPtw: 21, winBy: 2, cap: 30,
+    bestOf: [1, 3], defBest: 3, serve: "rally", next: "winner",
+    ends: { all: 11 }, noteText: "Interval at 11",
+    info: "Rally scoring to 21, win by 2, capped at 30. Interval at 11. Winner of each rally serves."
+  },
+  volleyball: {
+    name: "Volleyball", ptw: 25, decPtw: 15, winBy: 2, cap: null,
+    bestOf: [1, 3, 5], defBest: 5, serve: "rally", next: "alternate",
+    ends: { deciding: 8 }, noteText: "Change ends",
+    info: "Sets to 25, win by 2, no cap. Deciding set to 15. Ends change at 8 in the deciding set."
+  },
+  tabletennis: {
+    name: "Table tennis", ptw: 11, decPtw: 11, winBy: 2, cap: null,
+    bestOf: [1, 3, 5, 7], defBest: 5, serve: "two", next: "alternate",
+    ends: { deciding: 5 }, noteText: "Change ends",
+    info: "Games to 11, win by 2. Serve changes every 2 points, every point from 10–10. Ends change at 5 in the deciding game."
+  }
+};
+
+/* ---------- 2. STATE ---------- */
+let S = load();
+function load() { try { return JSON.parse(localStorage.getItem("court-score-v1")); } catch (e) { return null; } }
+function save() { try { localStorage.setItem("court-score-v1", JSON.stringify(S)); } catch (e) {} }
+
+/* Finished matches feed the standings. Win = 2 points, loss = 0 (change here). */
+const WIN_PTS = 2, LOSS_PTS = 0;
+let RESULTS = loadResults();
+let viewStandings = null;
+let viewLeague = false;
+let LEAGUE = loadLeague();
+function loadLeague() { try { return JSON.parse(localStorage.getItem("court-league-v1")); } catch (e) { return null; } }
+function saveLeague() { try { localStorage.setItem("court-league-v1", JSON.stringify(LEAGUE)); } catch (e) {} }
+
+/* Round robin by the circle method. An odd number of teams gets a bye each round. */
+function makeRounds(n, double) {
+  const arr = [...Array(n).keys()];
+  if (n % 2) arr.push(-1);
+  const m = arr.length, rounds = [];
+  for (let r = 0; r < m - 1; r++) {
+    const pairs = [], bye = [];
+    for (let i = 0; i < m / 2; i++) {
+      const a = arr[i], b = arr[m - 1 - i];
+      if (a < 0 || b < 0) bye.push(Math.max(a, b));
+      else pairs.push(r % 2 && i === 0 ? [b, a] : [a, b]);
+    }
+    rounds.push({ pairs, bye });
+    arr.splice(1, 0, arr.pop());
+  }
+  if (double) rounds.push(...rounds.map(x => ({ pairs: x.pairs.map(([a, b]) => [b, a]), bye: x.bye })));
+  return rounds;
+}
+function loadResults() { try { return JSON.parse(localStorage.getItem("court-results-v1")) || []; } catch (e) { return []; } }
+function saveResults() { try { localStorage.setItem("court-results-v1", JSON.stringify(RESULTS)); } catch (e) {} }
+function recordResult() {
+  RESULTS = RESULTS.filter(r => r.id !== S.id && !(S.lg && r.lg === S.lg && r.fx === S.fx));
+  if (S.lg && /^ko-sf/.test(S.fx)) RESULTS = RESULTS.filter(r => !(r.lg === S.lg && (r.fx === "ko-f" || r.fx === "ko-3")));
+  RESULTS.push({ lg: S.lg, fx: S.fx, ix: S.ix, id: S.id, sport: S.sport, names: [...S.names], games: [...S.games], log: S.log.map(g => [...g]), ts: Date.now() });
+  saveResults();
+}
+function standingsTable(list, seed = []) {
+  const rows = {};
+  seed.forEach(n => { rows[n.toLowerCase()] = { name: n, p: 0, w: 0, l: 0, gf: 0, ga: 0, pf: 0, pa: 0 }; });
+  list.forEach(r => {
+    r.names.forEach((n, i) => {
+      const o = (rows[n.toLowerCase()] ??= { name: n, p: 0, w: 0, l: 0, gf: 0, ga: 0, pf: 0, pa: 0 });
+      const j = 1 - i;
+      o.p++;
+      if (r.games[i] > r.games[j]) o.w++; else o.l++;
+      o.gf += r.games[i]; o.ga += r.games[j];
+      r.log.forEach(g => { o.pf += g[i]; o.pa += g[j]; });
+    });
+  });
+  return Object.values(rows)
+    .map(o => ({ ...o, pts: o.w * WIN_PTS + o.l * LOSS_PTS }))
+    .sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga) || (b.pf - b.pa) - (a.pf - a.pa) || a.name.localeCompare(b.name));
+}
+
+function newMatch(sport, bestOf, names, firstServer) {
+  S = { id: Date.now(), sport, bestOf, names, games: [0, 0], score: [0, 0], log: [], startServer: firstServer,
+        server: firstServer, over: false, notice: "", swap: false, history: [] };
+  save(); render();
+}
+const rule = () => RULES[S.sport];
+const need = () => Math.ceil(S.bestOf / 2);
+const isDeciding = () => need() > 1 && S.games[0] === need() - 1 && S.games[1] === need() - 1;
+const target = () => S.ptw || (isDeciding() ? rule().decPtw : rule().ptw);
+const capFor = () => (rule().cap ? (S.ptw ? S.ptw + 9 : rule().cap) : null);
+
+function gameWon(a, b) {
+  const R = rule(), hi = Math.max(a, b), lo = Math.min(a, b);
+  const cap = capFor();
+  if (cap && hi >= cap) return true;
+  return hi >= target() && hi - lo >= R.winBy;
+}
+
+function tableTennisServer() {
+  const n = S.score[0] + S.score[1];
+  const swaps = Math.floor(Math.min(n, 20) / 2) + Math.max(0, n - 20);
+  return (S.startServer + swaps) % 2;
+}
+
+/* ---------- 3. ACTIONS ---------- */
+function point(t) {
+  if (S.over) return;
+  const { history, ...snap } = S;
+  S.history.push(JSON.stringify(snap));
+  S.notice = "";
+  S.score[t]++;
+  const R = rule();
+
+  if (R.serve === "rally") S.server = t; else S.server = tableTennisServer();
+
+  const base = R.ends.all ?? (isDeciding() ? R.ends.deciding : undefined);
+  const thr = base && S.ptw ? Math.ceil(S.ptw / 2) : base;
+  if (thr && S.score[t] === thr && S.score[1 - t] < thr) S.notice = R.noteText;
+
+  if (gameWon(S.score[0], S.score[1])) {
+    S.log.push([...S.score]);
+    S.games[t]++;
+    S.notice = "";
+    if (S.games[t] >= need()) {
+      S.over = true;
+      recordResult();
+    } else {
+      S.score = [0, 0];
+      S.startServer = R.next === "winner" ? t : 1 - S.startServer;
+      S.server = S.startServer;
+    }
+  }
+  save(); render();
+}
+
+function undo() {
+  if (!S.history.length) return;
+  const history = S.history;
+  const prev = JSON.parse(history.pop());
+  Object.keys(S).forEach(k => delete S[k]);
+  Object.assign(S, prev, { history });
+  if (!S.over) { RESULTS = RESULTS.filter(r => r.id !== S.id); saveResults(); }
+  save(); render();
+}
+
+function toSetup() { viewLeague = !!(S && S.lg); S = null; try { localStorage.removeItem("court-score-v1"); } catch (e) {} render(); }
+function swapSides() { S.swap = !S.swap; save(); render(); }
+
+/* ---------- 4. VIEWS ---------- */
+const root = document.getElementById("root");
+/* Two-tap confirmation: browsers can block confirm() dialogs, so confirm in the page instead. */
+function confirmTap(btn, armedLabel, action) {
+  const orig = btn.textContent;
+  let armed = false, timer;
+  btn.onclick = () => {
+    if (!armed) {
+      armed = true; btn.textContent = armedLabel; btn.classList.add("warn");
+      timer = setTimeout(() => { armed = false; btn.textContent = orig; btn.classList.remove("warn"); }, 4000);
+      return;
+    }
+    clearTimeout(timer); action();
+  };
+}
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function render() {
+  if (viewStandings) return standings(viewStandings);
+  if (viewLeague) return leagueView();
+  S ? scorer() : setup();
+}
+
+const PTS_OPTIONS = [0, 11, 15, 21, 25];
+const ptsOptions = sel => PTS_OPTIONS.map(n => `<option value="${n}" ${n === sel ? "selected" : ""}>${n || "Standard"}</option>`).join("");
+
+function leagueSetup() {
+  root.innerHTML = `
+  <main class="setup">
+    <h1>New league</h1>
+    <label for="lsport">Game</label>
+    <select id="lsport">${Object.entries(RULES).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join("")}</select>
+    <label for="lbest">Best of</label>
+    <select id="lbest"></select>
+    <div class="row2">
+      <div><label for="lrr">Round robin to</label><select id="lrr"></select></div>
+      <div><label for="lko">Next stage to</label><select id="lko"></select></div>
+    </div>
+    <label for="lteams">Teams, one per line (2 to 12)</label>
+    <textarea id="lteams" rows="6">Team 1\nTeam 2\nTeam 3\nTeam 4</textarea>
+    <label class="chk"><input type="checkbox" id="ldbl"> Play each team twice (home and away)</label>
+    <p class="err" id="lerr" role="alert"></p>
+    <button class="go" id="lmk">Create league</button>
+    <button class="go alt" id="lback">Back</button>
+  </main>`;
+  const sp = document.getElementById("lsport"), bs = document.getElementById("lbest");
+  const rr = document.getElementById("lrr"), ko = document.getElementById("lko");
+  const fill = () => {
+    const R = RULES[sp.value];
+    bs.innerHTML = R.bestOf.map(n => `<option value="${n}" ${n === R.defBest ? "selected" : ""}>${n} ${n === 1 ? "game" : "games"}</option>`).join("");
+    const badminton = sp.value === "badminton";          // 15 for round robin, 21 for the next stage
+    rr.innerHTML = ptsOptions(badminton ? 15 : 0);
+    ko.innerHTML = ptsOptions(badminton ? 21 : 0);
+  };
+  fill(); sp.onchange = fill;
+  document.getElementById("lback").onclick = () => { viewLeague = false; render(); };
+  document.getElementById("lmk").onclick = () => {
+    const teams = document.getElementById("lteams").value.split("\n").map(t => t.trim()).filter(Boolean);
+    const err = m => { document.getElementById("lerr").textContent = m; };
+    if (teams.length < 2 || teams.length > 12) return err("Enter between 2 and 12 teams.");
+    if (new Set(teams.map(t => t.toLowerCase())).size !== teams.length) return err("Each team needs a different name.");
+    const dbl = document.getElementById("ldbl").checked;
+    LEAGUE = { id: Date.now(), sport: sp.value, bestOf: +bs.value, double: dbl, teams, rounds: makeRounds(teams.length, dbl),
+               ptwRR: +rr.value, ptwKO: +ko.value, ko: null };
+    saveLeague(); render();
+  };
+}
+
+function playFixture(a, b, key, ptw) {
+  const L = LEAGUE;
+  viewLeague = false;
+  newMatch(L.sport, L.bestOf, [L.teams[a], L.teams[b]], 0);
+  S.lg = L.id; S.ix = [a, b];
+  S.fx = key ?? (L.double ? a + "-" + b : Math.min(a, b) + "-" + Math.max(a, b));
+  S.ptw = ptw ?? (L.ptwRR || 0);
+  save(); render();
+}
+
+function leagueView() {
+  if (!LEAGUE) return leagueSetup();
+  const L = LEAGUE, all = RESULTS.filter(r => r.lg === L.id);
+  const isKO = r => String(r.fx).startsWith("ko-");
+  const res = all.filter(r => !isKO(r)), koRes = {}, by = {};
+  all.filter(isKO).forEach(r => { koRes[r.fx] = r; });
+  res.forEach(r => { by[r.fx] = r; });
+  const fkey = (a, b) => (L.double ? a + "-" + b : Math.min(a, b) + "-" + Math.max(a, b));
+  const oriented = (r, i) => (r.ix[0] === i ? [r.games[0], r.games[1]] : [r.games[1], r.games[0]]);
+  const total = L.rounds.reduce((n, x) => n + x.pairs.length, 0);
+  const rows = standingsTable(res, L.teams);
+  const sg = n => (n > 0 ? "+" + n : String(n));
+
+  const table = `<div class="scroll"><table class="st">
+    <thead><tr><th>#</th><th class="l">Team</th><th>P</th><th>W</th><th>L</th><th>GD</th><th>PD</th><th>Pts</th></tr></thead>
+    <tbody>${rows.map((r, i) => `<tr><td>${i + 1}</td><td class="l">${esc(r.name)}</td><td>${r.p}</td><td>${r.w}</td><td>${r.l}</td><td>${sg(r.gf - r.ga)}</td><td>${sg(r.pf - r.pa)}</td><td><b>${r.pts}</b></td></tr>`).join("")}</tbody>
+  </table></div>`;
+
+  /* Next stage: seeds 1 to 4 from the table. Semi-finals 1v4 and 2v3, third place, final. */
+  const outcome = k => {
+    const r = koRes[k]; if (!r) return null;
+    const w = r.games[0] > r.games[1] ? r.ix[0] : r.ix[1];
+    return { w, l: w === r.ix[0] ? r.ix[1] : r.ix[0] };
+  };
+  const side = x => {
+    if (typeof x === "number") return x;
+    const o = outcome(x.w || x.l);
+    return o ? (x.w ? o.w : o.l) : null;
+  };
+  let stage;
+  if (!L.ko) {
+    stage = res.length === total
+      ? `<button class="go" id="kostart">Start next stage (top ${L.teams.length >= 4 ? 4 : 2})</button>`
+      : `<p class="rule">Finish all round robin matches to unlock the next stage.</p>`;
+  } else {
+    const champ = outcome("ko-f");
+    stage = (champ ? `<p class="champ">Champion: ${esc(L.teams[champ.w])}</p>` : "") + L.ko.matches.map(m => {
+      const a = side(m.a), b = side(m.b), r = koRes[m.key], ready = a !== null && b !== null;
+      const lab = ready ? `${esc(L.teams[a])} vs ${esc(L.teams[b])}` : "To be decided";
+      let right = "";
+      if (r && ready) { const [x, y] = oriented(r, a); right = `<b>${x}–${y}</b> <button class="pl pk re" data-k="${m.key}">Replay</button>`; }
+      else if (ready) right = `<button class="pl pk" data-k="${m.key}">Play</button>`;
+      return `<div class="fx"><span>${m.label}: ${lab}</span><span>${right}</span></div>`;
+    }).join("");
+  }
+
+  const matrix = `<div class="scroll"><table class="mx">
+    <thead><tr><th></th>${L.teams.map((_, i) => `<th>${i + 1}</th>`).join("")}</tr></thead>
+    <tbody>${L.teams.map((t, i) => `<tr><td class="l">${i + 1} ${esc(t)}</td>${L.teams.map((_, j) => {
+      if (i === j) return `<td class="dg"></td>`;
+      const r = by[fkey(i, j)];
+      if (r) { const [x, y] = oriented(r, i); return `<td class="${x > y ? "win" : "loss"}">${x}–${y}</td>`; }
+      return `<td><button class="pl" data-a="${i}" data-b="${j}" aria-label="Play ${esc(t)} against ${esc(L.teams[j])}">play</button></td>`;
+    }).join("")}</tr>`).join("")}</tbody></table></div>`;
+
+  const rounds = L.rounds.map((rd, n) => `<h3>Round ${n + 1}</h3>${rd.pairs.map(([a, b]) => {
+    const r = by[fkey(a, b)], lab = `${esc(L.teams[a])} vs ${esc(L.teams[b])}`;
+    if (r) { const [x, y] = oriented(r, a); return `<div class="fx"><span>${lab}</span><span><b>${x}–${y}</b> <button class="pl re" data-a="${a}" data-b="${b}">Replay</button></span></div>`; }
+    return `<div class="fx"><span>${lab}</span><button class="pl" data-a="${a}" data-b="${b}">Play</button></div>`;
+  }).join("")}${rd.bye.length ? `<div class="fx"><span>Bye: ${esc(L.teams[rd.bye[0]])}</span></div>` : ""}`).join("");
+
+  root.innerHTML = `
+  <main class="setup wide">
+    <h1>${RULES[L.sport].name} league</h1>
+    <div class="nav three top"><button id="lgback">Back</button><button id="lgreset">Reset results</button><button id="lgdel">Delete league</button></div>
+    <p class="rule">Best of ${L.bestOf}, ${L.double ? "home and away" : "everyone plays everyone once"}. ${res.length} of ${total} round robin matches played.</p>
+    <div class="row2">
+      <div><label for="srr">Round robin to</label><select id="srr">${ptsOptions(L.ptwRR || 0)}</select></div>
+      <div><label for="sko">Next stage to</label><select id="sko">${ptsOptions(L.ptwKO || 0)}</select></div>
+    </div>
+    <h3>Table</h3>${table}
+    <h3>Next stage</h3>${stage}
+    <h3>Results chart (read across: row team’s games first)</h3>${matrix}
+    ${rounds}
+    <button class="go" id="lgback2">Back</button>
+  </main>`;
+
+  document.getElementById("srr").onchange = e => { L.ptwRR = +e.target.value; saveLeague(); };
+  document.getElementById("sko").onchange = e => { L.ptwKO = +e.target.value; saveLeague(); };
+  root.querySelectorAll("button.pl:not(.pk)").forEach(b => {
+    const a = +b.dataset.a, c = +b.dataset.b;
+    if (b.classList.contains("re")) confirmTap(b, "Tap again", () => playFixture(a, c));
+    else b.onclick = () => playFixture(a, c);
+  });
+  root.querySelectorAll("button.pk").forEach(b => {
+    const m = L.ko.matches.find(x => x.key === b.dataset.k);
+    const go = () => playFixture(side(m.a), side(m.b), m.key, L.ptwKO || 0);
+    if (b.classList.contains("re")) confirmTap(b, "Tap again", go); else b.onclick = go;
+  });
+  const start = document.getElementById("kostart");
+  if (start) start.onclick = () => {
+    const n = L.teams.length >= 4 ? 4 : 2;
+    const sd = rows.slice(0, n).map(r => L.teams.findIndex(t => t.toLowerCase() === r.name.toLowerCase()));
+    L.ko = { matches: n === 4
+      ? [{ key: "ko-sf1", label: "Semi-final 1", a: sd[0], b: sd[3] },
+         { key: "ko-sf2", label: "Semi-final 2", a: sd[1], b: sd[2] },
+         { key: "ko-3", label: "Third place", a: { l: "ko-sf1" }, b: { l: "ko-sf2" } },
+         { key: "ko-f", label: "Final", a: { w: "ko-sf1" }, b: { w: "ko-sf2" } }]
+      : [{ key: "ko-f", label: "Final", a: sd[0], b: sd[1] }] };
+    saveLeague(); render();
+  };
+  const leave = () => { viewLeague = false; render(); };
+  document.getElementById("lgback").onclick = leave;
+  document.getElementById("lgback2").onclick = leave;
+  confirmTap(document.getElementById("lgreset"), "Tap again to reset", () => {
+    RESULTS = RESULTS.filter(r => r.lg !== L.id); saveResults();
+    L.ko = null; saveLeague(); render();
+  });
+  confirmTap(document.getElementById("lgdel"), "Tap again to delete", () => {
+    RESULTS = RESULTS.filter(r => r.lg !== L.id); saveResults();
+    LEAGUE = null; saveLeague(); render();
+  });
+}
+
+function standings(sport) {
+  const rows = standingsTable(RESULTS.filter(r => r.sport === sport));
+  const recent = RESULTS.filter(r => r.sport === sport).slice(-5).reverse();
+  const sg = n => (n > 0 ? "+" + n : String(n));
+  root.innerHTML = `
+  <main class="setup">
+    <h1>Standings</h1>
+    <div class="tabs">${Object.entries(RULES).map(([k, v]) =>
+      `<button data-s="${k}" class="${k === sport ? "on" : ""}">${v.name}</button>`).join("")}</div>
+    ${rows.length ? `<div class="scroll"><table class="st">
+      <thead><tr><th>#</th><th class="l">Team</th><th>P</th><th>W</th><th>L</th><th>GD</th><th>PD</th><th>Pts</th></tr></thead>
+      <tbody>${rows.map((r, i) => `<tr><td>${i + 1}</td><td class="l">${esc(r.name)}</td><td>${r.p}</td><td>${r.w}</td><td>${r.l}</td><td>${sg(r.gf - r.ga)}</td><td>${sg(r.pf - r.pa)}</td><td><b>${r.pts}</b></td></tr>`).join("")}</tbody>
+    </table></div>
+    <p class="rule">P played, W won, L lost, GD game difference, PD point difference. A win is ${WIN_PTS} points and a loss is ${LOSS_PTS}. Ties are split by GD, then PD.</p>`
+    : `<p class="rule">No finished ${RULES[sport].name.toLowerCase()} matches yet. The table fills in as each match ends.</p>`}
+    ${recent.length ? `<label>Recent results</label>${recent.map(r =>
+      `<p class="rule">${esc(r.names[0])} ${r.games[0]}–${r.games[1]} ${esc(r.names[1])} (${r.log.map(g => g[0] + "–" + g[1]).join(", ")})</p>`).join("")}` : ""}
+    <button class="go" id="back">Back</button>
+    ${rows.length ? `<button class="go alt" id="clear">Clear ${RULES[sport].name.toLowerCase()} results</button>` : ""}
+  </main>`;
+  root.querySelectorAll(".tabs button").forEach(b => b.onclick = () => { viewStandings = b.dataset.s; render(); });
+  document.getElementById("back").onclick = () => { viewStandings = null; render(); };
+  const c = document.getElementById("clear");
+  if (c) confirmTap(c, "Tap again to clear", () => {
+    RESULTS = RESULTS.filter(r => r.sport !== sport); saveResults(); render();
+  });
+}
+
+function setup(sport = "badminton") {
+  const R = RULES[sport];
+  root.innerHTML = `
+  <main class="setup">
+    <h1>New match</h1>
+    <div class="nav"><button id="lg">League</button><button id="stand">Standings</button></div>
+    <label for="sport">Game</label>
+    <select id="sport">${Object.entries(RULES).map(([k, v]) =>
+      `<option value="${k}" ${k === sport ? "selected" : ""}>${v.name}</option>`).join("")}</select>
+    <label for="best">Best of</label>
+    <select id="best">${R.bestOf.map(n =>
+      `<option value="${n}" ${n === R.defBest ? "selected" : ""}>${n} ${n === 1 ? "game" : "games"}</option>`).join("")}</select>
+    <div class="row2">
+      <div><label for="n0">Team A</label><input id="n0" value="Team A" maxlength="14"></div>
+      <div><label for="n1">Team B</label><input id="n1" value="Team B" maxlength="14"></div>
+    </div>
+    <label for="srv">First serve</label>
+    <select id="srv"><option value="0">Team A</option><option value="1">Team B</option></select>
+    <p class="rule">${R.info}</p>
+    <button class="go" id="start">Start match</button>
+  </main>`;
+  document.getElementById("sport").onchange = e => setup(e.target.value);
+  document.getElementById("start").onclick = () => {
+    const names = [document.getElementById("n0").value.trim() || "Team A", document.getElementById("n1").value.trim() || "Team B"];
+    newMatch(document.getElementById("sport").value, +document.getElementById("best").value, names, +document.getElementById("srv").value);
+  };
+  document.getElementById("lg").onclick = () => { viewLeague = true; render(); };
+  document.getElementById("stand").onclick = () => { viewStandings = document.getElementById("sport").value; render(); };
+}
+
+function scorer() {
+  const R = rule();
+  const order = S.swap ? [1, 0] : [0, 1];
+  const side = t => {
+    const serving = S.server === t && !S.over;
+    const court = R.serve === "rally" && S.sport === "badminton" ? (S.score[t] % 2 === 0 ? " · right court" : " · left court") : "";
+    const pips = Array.from({ length: need() }, (_, i) => `<span class="pip ${i < S.games[t] ? "f" : ""}"></span>`).join("");
+    return `<button class="side t${t}" data-t="${t}" aria-label="Add point for ${esc(S.names[t])}">
+      <span class="name">${esc(S.names[t])}</span>
+      <span class="pts">${S.score[t]}</span>
+      <span class="serve ${serving ? "on" : ""}">● Serving${court}</span>
+      <span class="pips" aria-label="Games won: ${S.games[t]}">${pips}</span>
+    </button>`;
+  };
+  const gameNo = S.log.length + 1;
+  root.innerHTML = `
+  <div class="app">
+    <div class="top">
+      <span>${R.name} · Game ${S.over ? S.log.length : gameNo} of ${S.bestOf}${S.ptw ? " · to " + S.ptw : isDeciding() && !S.over ? " · deciding, to " + target() : ""}</span>
+      ${S.notice ? `<span class="notice" role="status">${S.notice}</span>` : ""}
+    </div>
+    <div class="board">${order.map(side).join("")}</div>
+    <div class="bar">
+      <button id="undo">Undo</button>
+      <button id="swap">Swap sides</button>
+      <button id="reset">New match</button>
+      <button id="lgo">League</button>
+    </div>
+    ${S.over ? resultView() : ""}
+  </div>`;
+  root.querySelectorAll(".side").forEach(b => b.onclick = () => point(+b.dataset.t));
+  document.getElementById("undo").onclick = undo;
+  document.getElementById("swap").onclick = swapSides;
+  document.getElementById("lgo").onclick = () => { viewLeague = true; render(); };
+  const rb = document.getElementById("reset");
+  if (S.over) rb.onclick = toSetup; else confirmTap(rb, "Tap again to discard", toSetup);
+  if (S.over) {
+    document.getElementById("again").onclick = toSetup;
+    if (S.lg) document.getElementById("toLg").onclick = () => { viewLeague = true; render(); };
+    document.getElementById("fix").onclick = undo;
+    document.getElementById("stdg").onclick = () => { viewStandings = S.sport; render(); };
+  }
+}
+
+function resultView() {
+  const w = S.games[0] > S.games[1] ? 0 : 1;
+  return `<div class="over" role="dialog" aria-label="Match result">
+    <h2>${esc(S.names[w])} win</h2>
+    <p>${S.games[0]}–${S.games[1]} in games</p>
+    <p>${S.log.map(g => g[0] + "–" + g[1]).join("   ")}</p>
+    ${S.lg ? `<button class="go" id="toLg">Back to league</button>` : ""}
+    <button class="go ${S.lg ? "alt" : ""}" id="again">New match</button>
+    <button class="go alt" id="stdg">Standings</button>
+    <button class="go alt" id="fix">Undo last point</button>
+  </div>`;
+}
+
+render();
+</script>
+</body>
+</html>
